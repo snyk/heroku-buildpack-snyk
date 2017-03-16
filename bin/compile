@@ -1,0 +1,36 @@
+#! /bin/bash
+
+set -eo pipefail
+
+indent() {
+  sed "s/^/       /"
+}
+
+BUILD_DIR="$1"
+CACHE_DIR="$2"
+ENV_DIR="$3"
+
+WORKSPACE="${CACHE_DIR}/snyk"
+
+[[ -f "${ENV_DIR}/SNYK_TOKEN" ]] && SNYK_TOKEN="$(cat "${ENV_DIR}/SNYK_TOKEN")"
+[[ -f "${ENV_DIR}/SNYK_ORG" ]] && SNYK_ORG="$(cat "${ENV_DIR}/SNYK_ORG")"
+
+if [[ -z "${SNYK_TOKEN}" ]]; then
+  echo "-----> No Snyk token configured, skipping Snyk!"
+  echo "Please configure a Snyk token using \"heroku config:set SNYK_TOKEN=xxx\"" | indent
+
+  exit 0
+fi
+
+export SNYK_TOKEN
+
+mkdir -p "${WORKSPACE}"
+cd "${WORKSPACE}"
+# prevent errors and warnings from npm
+echo '{"description":"","repository":"","license":""}' > ./package.json
+
+echo "-----> Intalling Snyk CLI"
+npm install snyk -q | indent
+
+echo "-----> Updating project dependencies on Snyk"
+./node_modules/.bin/snyk monitor ${BUILD_DIR} --org="${SNYK_ORG}" | indent

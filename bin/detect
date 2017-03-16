@@ -1,0 +1,4 @@
+#! /bin/sh
+
+echo "Snyk"
+exit 0
